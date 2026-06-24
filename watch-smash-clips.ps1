@@ -1,7 +1,8 @@
 param(
     [string]$RawPath = "D:\Garbage SS2",
     [string]$QueuePath = "$PSScriptRoot\SmashClipQueue",
-    [switch]$ScanExisting
+    [switch]$ScanExisting,
+    [switch]$AutoUploadYouTube
 )
 
 $ErrorActionPreference = "Stop"
@@ -172,6 +173,7 @@ Needs review
 "@ | Set-Content -LiteralPath (Join-Path $packagePath "youtube_shorts.txt") -Encoding UTF8
 
     Write-Log "Packaged: $packagePath"
+    return $packagePath
 }
 
 # --- Setup ---
@@ -208,10 +210,13 @@ $action = {
 Register-ObjectEvent -InputObject $watcher -EventName Created -Action $action -MessageData $pendingQueue | Out-Null
 Register-ObjectEvent -InputObject $watcher -EventName Renamed -Action $action -MessageData $pendingQueue | Out-Null
 
+$script:UploadScript = Join-Path $PSScriptRoot "upload_youtube.py"
+
 Write-Host ""
 Write-Host "Watching: $RawPath"
 Write-Host "Queue:    $QueuePath"
 Write-Host "Log:      $($script:LogFile)"
+if ($AutoUploadYouTube) { Write-Host "Mode:     Auto-upload to YouTube (private)" }
 Write-Host "Press Ctrl+C to stop."
 Write-Host ""
 
@@ -220,9 +225,13 @@ while ($true) {
     $path = $null
     while ($pendingQueue.TryDequeue([ref]$path)) {
         try {
-            New-ClipPackage -VideoPath $path
+            $packagePath = New-ClipPackage -VideoPath $path
+            if ($AutoUploadYouTube -and $packagePath -and (Test-Path -LiteralPath $script:UploadScript)) {
+                Write-Log "Auto-uploading to YouTube: $packagePath"
+                python $script:UploadScript $packagePath
+            }
         } catch {
-            Write-Log "Error packaging $path`: $_" "ERROR"
+            Write-Log "Error processing $path`: $_" "ERROR"
         }
     }
     Start-Sleep -Seconds 2
