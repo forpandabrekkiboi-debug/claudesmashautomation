@@ -137,7 +137,7 @@ def main():
 
     metadata_path = os.path.join(package_dir, "metadata.json")
     if os.path.exists(metadata_path):
-        with open(metadata_path, encoding="utf-8") as f:
+        with open(metadata_path, encoding="utf-8-sig") as f:
             metadata = json.load(f)
         metadata["youtube_video_id"] = video_id
         metadata["youtube_url"] = video_url
