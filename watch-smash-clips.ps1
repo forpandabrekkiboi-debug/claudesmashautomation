@@ -56,6 +56,21 @@ function Wait-FileStable {
     return $false
 }
 
+function Get-AlreadyPackaged {
+    param([string]$SourcePath)
+    if (-not (Test-Path -LiteralPath $QueuePath)) { return $false }
+    Get-ChildItem -LiteralPath $QueuePath -Directory | ForEach-Object {
+        $meta = Join-Path $_.FullName "metadata.json"
+        if (Test-Path -LiteralPath $meta) {
+            try {
+                $data = Get-Content -LiteralPath $meta -Raw -Encoding UTF8 | ConvertFrom-Json
+                if ($data.source_file -eq $SourcePath) { return $true }
+            } catch {}
+        }
+    }
+    return $false
+}
+
 function New-ClipPackage {
     param([string]$VideoPath)
 
@@ -63,6 +78,11 @@ function New-ClipPackage {
 
     $item = Get-Item -LiteralPath $VideoPath
     if ($videoExtensions -notcontains $item.Extension.ToLowerInvariant()) { return }
+
+    if (Get-AlreadyPackaged -SourcePath $item.FullName) {
+        Write-Log "Skipping already-packaged clip: $($item.Name)"
+        return
+    }
 
     Write-Log "New clip detected: $($item.Name)"
 
