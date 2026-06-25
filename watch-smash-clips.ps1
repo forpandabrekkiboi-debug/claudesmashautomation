@@ -229,6 +229,10 @@ while ($true) {
             if ($AutoUploadYouTube -and $packagePath -and (Test-Path -LiteralPath $script:UploadScript)) {
                 Write-Log "Auto-uploading to YouTube: $packagePath"
                 python $script:UploadScript $packagePath
+                if ($LASTEXITCODE -eq 2) {
+                    Write-Log "YouTube quota hit — auto-upload disabled for this session. Clips will still be packaged." "WARN"
+                    $AutoUploadYouTube = $false
+                }
             }
         } catch {
             Write-Log "Error processing $path`: $_" "ERROR"

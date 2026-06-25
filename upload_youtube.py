@@ -126,7 +126,14 @@ def main():
     print("Uploading...")
     response = None
     while response is None:
-        status_obj, response = request.next_chunk()
+        try:
+            status_obj, response = request.next_chunk()
+        except Exception as e:
+            msg = str(e)
+            if "uploadLimitExceeded" in msg or "forbidden" in msg.lower():
+                print(f"\nQuota/limit error — stopping uploads for this session.")
+                sys.exit(2)
+            raise
         if status_obj:
             pct = int(status_obj.resumable_progress / status_obj.total_size * 100)
             print(f"  {pct}%", end="\r")
